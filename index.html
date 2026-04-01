@@ -242,7 +242,7 @@
 
     <!-- Background Music -->
     <audio id="bgMusic" loop>
-        <source src="Can't Help Falling in Love.mp3" type="audio/mpeg">
+        <source src="song.mp3" type="audio/mpeg">
     </audio>
     
     <div class="music-control" id="musicBtn" onclick="toggleMusic()">🔊</div>
@@ -299,27 +299,26 @@
         }
 
         // Music Control
-        let isMuted = false;
-        const player = document.getElementById('youtubePlayer');
+        let isPlaying = false;
+        const bgMusic = document.getElementById('bgMusic');
         
         function toggleMusic() {
-            isMuted = !isMuted;
             const btn = document.getElementById('musicBtn');
-            if (isMuted) {
+            if (isPlaying) {
                 btn.innerText = '🔇';
-                player.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+                bgMusic.pause();
             } else {
                 btn.innerText = '🔊';
-                player.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
-                player.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                bgMusic.play();
             }
+
+            isPlaying = !isPlaying;
         }
 
         // Auto-play fallback (browsers require user interaction)
         document.addEventListener('click', function() {
-            if (!isMuted) {
-                player.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
-                player.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            if (!isPlaying) {
+                bgMusic.play();
             }
         }, { once: true });
 
