@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday, Beautiful!</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #ff8fa3;
+            --secondary-color: #ff4d6d;
+            --bg-color: #fff0f3;
+            --text-color: #590d22;
+            --card-width: 350px;
+            --card-height: 500px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            color: var(--text-color);
+            perspective: 1500px;
+        }
+
+        /* Background Music Button */
+        .music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid var(--primary-color);
+            font-size: 24px;
+        }
+
+        /* 3D Card */
+        .card-container {
+            width: var(--card-width);
+            height: var(--card-height);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .card-container.open {
+            transform: rotateY(-180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-front {
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 8px solid var(--primary-color);
+            z-index: 2;
+        }
+
+        .card-inside {
+            background: #fffafa;
+            transform: rotateY(180deg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            z-index: 1;
+        }
+
+        /* Cake Styles */
+        .cake-wrapper {
+            position: relative;
+            margin-top: 40px;
+        }
+
+        .cake {
+            width: 150px;
+            height: 100px;
+            background: #f4d03f;
+            border-radius: 10px 10px 0 0;
+            position: relative;
+            box-shadow: inset 0 -15px 0 #eb984e;
+        }
+
+        .cake::before {
+            content: '';
+            position: absolute;
+            width: 160px;
+            height: 20px;
+            background: #e67e22;
+            bottom: -20px;
+            left: -5px;
+            border-radius: 5px;
+        }
+
+        .icing {
+            width: 150px;
+            height: 30px;
+            background: #fff;
+            border-radius: 10px 10px 20px 20px;
+            position: absolute;
+            top: 0;
+        }
+
+        .candles-container {
+            position: absolute;
+            top: -40px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        .candle {
+            width: 6px;
+            height: 35px;
+            background: linear-gradient(to bottom, #ff8fa3, #ff4d6d);
+            position: relative;
+            border-radius: 3px;
+        }
+
+        .flame {
+            width: 10px;
+            height: 15px;
+            background: orange;
+            border-radius: 50% 50% 20% 20%;
+            position: absolute;
+            top: -18px;
+            left: -2px;
+            animation: flicker 0.1s infinite alternate;
+            box-shadow: 0 0 10px orange;
+        }
+
+        @keyframes flicker {
+            0% { transform: scale(1); opacity: 0.9; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .flame.blown {
+            display: none;
+        }
+
+        /* Content inside card */
+        .inside-content {
+            width: 100%;
+        }
+
+        .heart-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.3s, background-color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .message-box {
+            margin-top: 1.5rem;
+            min-height: 50px;
+            font-style: italic;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        /* Floating Hearts Animation */
+        .heart-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .floating-heart {
+            position: absolute;
+            color: var(--primary-color);
+            opacity: 0.6;
+            animation: float 6s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        .instruction {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .game-link {
+            margin-top: 20px;
+            display: block;
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="heart-bg" id="heartBg"></div>
+
+    <!-- Background Music -->
+    <iframe id="youtubePlayer" style="display:none" width="0" height="0" src="https://www.youtube.com/embed/x3X8eBGYY6U?enablejsapi=1&autoplay=1&loop=1&playlist=x3X8eBGYY6U&mute=0" frameborder="0"></iframe>
+    
+    <div class="music-control" id="musicBtn" onclick="toggleMusic()">🔊</div>
+
+    <div class="card-container" id="card" onclick="flipCard()">
+        <!-- Front of Card -->
+        <div class="card-face card-front">
+            <h1 style="color: var(--secondary-color); margin-bottom: 0;">For You</h1>
+            <p>Click to open ❤️</p>
+            
+            <div class="cake-wrapper">
+                <div class="candles-container" id="candles">
+                    <!-- 12 Candles -->
+                </div>
+                <div class="cake">
+                    <div class="icing"></div>
+                </div>
+            </div>
+            <p id="micStatus" style="font-size: 0.8rem; margin-top: 30px; color: var(--secondary-color);">
+                Make a wish and blow! 🌬️
+            </p>
+        </div>
+
+        <!-- Inside of Card -->
+        <div class="card-face card-inside" onclick="event.stopPropagation()">
+            <h1>Happy Birthday!</h1>
+            <p>You mean the world to me. 💙</p>
+            
+            <button class="heart-btn" onclick="revealSurprise()">
+                <span>Click for a Surprise</span>
+                <span id="btnIcon">🎁</span>
+            </button>
+
+            <div class="message-box" id="messageBox"></div>
+            
+            <a href="game.html" class="game-link">🎮 Play a little game?</a>
+        </div>
+    </div>
+
+    <script>
+        // Create 12 candles
+        const candlesContainer = document.getElementById('candles');
+        for (let i = 0; i < 12; i++) {
+            const candle = document.createElement('div');
+            candle.className = 'candle';
+            const flame = document.createElement('div');
+            flame.className = 'flame';
+            candle.appendChild(flame);
+            candlesContainer.appendChild(candle);
+        }
+
+        function flipCard() {
+            document.getElementById('card').classList.toggle('open');
+        }
+
+        // Music Control
+        let isMuted = false;
+        const player = document.getElementById('youtubePlayer');
+        
+        function toggleMusic() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('musicBtn');
+            if (isMuted) {
+                btn.innerText = '🔇';
+                player.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+            } else {
+                btn.innerText = '🔊';
+                player.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+                player.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            }
+        }
+
+        // Auto-play fallback (browsers require user interaction)
+        document.addEventListener('click', function() {
+            if (!isMuted) {
+                player.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+                player.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            }
+        }, { once: true });
+
+        // Microphone Blowing Detection
+        async function setupMic() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                function checkBlow() {
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < bufferLength; i++) {
+                        sum += dataArray[i];
+                    }
+                    let average = sum / bufferLength;
+
+                    if (average > 60) { // Threshold for "blowing"
+                        const flames = document.querySelectorAll('.flame');
+                        let allBlown = true;
+                        flames.forEach(f => {
+                            if (!f.classList.contains('blown')) {
+                                f.classList.add('blown');
+                                confetti({
+                                    particleCount: 5,
+                                    spread: 20,
+                                    origin: { x: 0.5, y: 0.5 }
+                                });
+                            }
+                        });
+                        document.getElementById('micStatus').innerText = "Wish made! ✨";
+                    }
+                    requestAnimationFrame(checkBlow);
+                }
+                checkBlow();
+            } catch (err) {
+                console.log("Mic access denied or not available");
+                document.getElementById('micStatus').innerText = "Click candles to blow them out!";
+                // Fallback: click to blow
+                document.getElementById('candles').onclick = () => {
+                    document.querySelectorAll('.flame').forEach(f => f.classList.add('blown'));
+                    document.getElementById('micStatus').innerText = "Wish made! ✨";
+                };
+            }
+        }
+        setupMic();
+
+        // Reveal Surprise (Same as before but integrated)
+        const messages = [
+            "You are the best thing that ever happened to me! 💖",
+            "Every day with you is a gift. 🎁",
+            "You make my heart skip a beat! 💓",
+            "I'm so lucky to have you in my life. 🍀",
+            "To many more birthdays together! 🥂",
+            "You're beautiful inside and out! ✨",
+            "I love you more than words can say! 😍",
+            "Meri Jaan ho Beea Jee! 💜",
+            "Thank you for being my life. 🌟",
+            "I will always be by your side, My Love 🤗",
+            "Meri Husn e Jaana ho 🌒",
+            "I love my life, My Love! 💙",
+            "You have brought real happiness for me, My Happiness 😶‍🌫️",
+            "Thank You for Everything"
+        ];
+        let messageIndex = 0;
+
+        function revealSurprise() {
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ff8fa3', '#ff4d6d', '#ff758f', '#ffffff']
+            });
+
+            const messageBox = document.getElementById('messageBox');
+            messageBox.style.opacity = 0;
+            
+            setTimeout(() => {
+                messageBox.innerText = messages[messageIndex];
+                messageBox.style.opacity = 1;
+                messageBox.style.transition = 'opacity 0.5s';
+                messageIndex = (messageIndex + 1) % messages.length;
+            }, 200);
+
+            const btnIcon = document.getElementById('btnIcon');
+            const icons = ['💖', '💝', '🌸', '✨', '🎂'];
+            btnIcon.innerText = icons[Math.floor(Math.random() * icons.length)];
+        }
+
+        // Floating Hearts
+        function createFloatingHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('floating-heart');
+            heart.innerHTML = '❤️';
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.fontSize = (Math.random() * 20 + 10) + 'px';
+            heart.style.animationDuration = (Math.random() * 3 + 3) + 's';
+            heart.style.opacity = Math.random() * 0.5 + 0.3;
+            document.getElementById('heartBg').appendChild(heart);
+            setTimeout(() => heart.remove(), 6000);
+        }
+        setInterval(createFloatingHeart, 300);
+    </script>
+</body>
+</html>

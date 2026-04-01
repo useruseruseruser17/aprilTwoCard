@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Hearts! ❤️</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #ff8fa3;
+            --secondary-color: #ff4d6d;
+            --bg-color: #fff0f3;
+            --text-color: #590d22;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            color: var(--text-color);
+        }
+
+        #gameCanvas {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(255, 143, 163, 0.3);
+            cursor: crosshair;
+            max-width: 95vw;
+            max-height: 70vh;
+        }
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.3s, background-color 0.3s;
+            text-decoration: none;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            background-color: #ff758f;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 240, 243, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Background Music Button */
+        .music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid var(--primary-color);
+            font-size: 24px;
+        }
+
+        h2 { color: var(--secondary-color); font-size: 2rem; }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Music -->
+    <iframe id="youtubePlayer" style="display:none" width="0" height="0" src="https://www.youtube.com/embed/x3X8eBGYY6U?enablejsapi=1&autoplay=1&loop=1&playlist=x3X8eBGYY6U&mute=0" frameborder="0"></iframe>
+    
+    <div class="music-control" id="musicBtn" onclick="toggleMusic()">🔊</div>
+
+    <div class="stats">
+        <div>Score: <span id="score">0</span></div>
+        <div>Time: <span id="timer">30</span>s</div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <a href="index.html" class="btn">Back to Card</a>
+
+    <div id="overlay">
+        <h2 id="overlayTitle">Catch the Hearts!</h2>
+        <p id="overlayText">Catch hearts for points! Watch out for spikes! ⚠️<br><br>❤️ Red: 1 pt | 💙 Blue: 3 pts | 💜 Purple: 3 pts<br>⚙️ Spikes: -5 pts!</p>
+        <button class="btn" onclick="startGame()">Start Game</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayText = document.getElementById('overlayText');
+
+        canvas.width = 600;
+        canvas.height = 400;
+
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = false;
+        let entities = [];
+        let gameInterval;
+        let spawnRate = 800;
+        let popups = [];
+
+        class Entity {
+            constructor(type) {
+                this.type = type;
+                this.x = Math.random() * (canvas.width - 60) + 30;
+                this.y = canvas.height + 40;
+                this.speed = Math.random() * 2 + 1.5;
+                this.size = Math.random() * 10 + 15;
+                
+                if (type === 'red') {
+                    this.color = '#ff4d6d';
+                    this.points = 1;
+                } else if (type === 'blue') {
+                    this.color = '#3498db';
+                    this.points = 3;
+                    this.speed += 1;
+                } else if (type === 'purple') {
+                    this.color = '#9b59b6';
+                    this.points = 3;
+                    this.speed += 1;
+                } else if (type === 'spike') {
+                    this.color = '#333';
+                    this.points = -5;
+                    this.speed += 0.5;
+                }
+            }
+
+            draw() {
+                if (this.type === 'spike') {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x - 15, this.y + 30);
+                    ctx.lineTo(this.x + 15, this.y + 30);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Add some detail to spikes
+                    ctx.strokeStyle = '#fff';
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    const d = this.size;
+                    ctx.moveTo(this.x, this.y);
+                    ctx.bezierCurveTo(this.x, this.y - 3, this.x - 5, this.y - 15, this.x - d, this.y - 15);
+                    ctx.bezierCurveTo(this.x - d * 2, this.y - 15, this.x - d * 2, this.y + d / 4, this.x - d * 2, this.y + d / 4);
+                    ctx.bezierCurveTo(this.x - d * 2, this.y + d, this.x - d, this.y + d * 1.5, this.x, this.y + d * 2.1);
+                    ctx.bezierCurveTo(this.x + d, this.y + d * 1.5, this.x + d * 2, this.y + d, this.x + d * 2, this.y + d / 4);
+                    ctx.bezierCurveTo(this.x + d * 2, this.y + d / 4, this.x + d * 2, this.y - 15, this.x + d, this.y - 15);
+                    ctx.bezierCurveTo(this.x + 5, this.y - 15, this.x, this.y - 3, this.x, this.y);
+                    ctx.fill();
+                }
+            }
+
+            update() {
+                this.y -= this.speed;
+            }
+        }
+
+        class Popup {
+            constructor(x, y, text, color) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.opacity = 1;
+                this.life = 60;
+            }
+            update() {
+                this.y -= 1;
+                this.opacity -= 1/60;
+                this.life--;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = this.color;
+                ctx.font = "bold 20px Arial";
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            timeLeft = 30;
+            entities = [];
+            popups = [];
+            gameActive = true;
+            scoreElement.innerText = score;
+            timerElement.innerText = timeLeft;
+            overlay.classList.add('hidden');
+            
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+
+            animate();
+            spawnEntity();
+        }
+
+        function spawnEntity() {
+            if (!gameActive) return;
+            
+            const rand = Math.random();
+            let type = 'red';
+            if (rand > 0.9) type = 'spike';
+            else if (rand > 0.8) type = 'purple';
+            else if (rand > 0.7) type = 'blue';
+            
+            entities.push(new Entity(type));
+            
+            // Speed up spawning as time goes on
+            let currentSpawnRate = spawnRate - (30 - timeLeft) * 15;
+            setTimeout(spawnEntity, Math.max(150, currentSpawnRate));
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameInterval);
+            overlay.classList.remove('hidden');
+            overlayTitle.innerText = "Game Over!";
+            
+            let message = `You scored ${score} points! ❤️`;
+            if (score > 50) {
+                message += "<br><br>Incredible! You're a pro at catching hearts! 😍✨";
+                confetti({
+                    particleCount: 200,
+                    spread: 90,
+                    origin: { y: 0.6 }
+                });
+            } else if (score > 20) {
+                message += "<br><br>Great job! You caught so many hearts for me! 😘";
+            }
+            overlayText.innerHTML = message;
+        }
+
+        function animate() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            entities.forEach((entity, index) => {
+                entity.update();
+                entity.draw();
+                if (entity.y < -50) entities.splice(index, 1);
+            });
+
+            popups.forEach((popup, index) => {
+                popup.update();
+                popup.draw();
+                if (popup.life <= 0) popups.splice(index, 1);
+            });
+            
+            requestAnimationFrame(animate);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!gameActive) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            entities.forEach((entity, index) => {
+                const dist = Math.hypot(mouseX - entity.x, mouseY - (entity.y + (entity.type === 'spike' ? 15 : entity.size)));
+                if (dist < 30) {
+                    entities.splice(index, 1);
+                    score += entity.points;
+                    scoreElement.innerText = score;
+                    
+                    const popupText = entity.points > 0 ? `+${entity.points}` : `${entity.points}`;
+                    const popupColor = entity.points > 0 ? entity.color : '#e74c3c';
+                    popups.push(new Popup(entity.x, entity.y, popupText, popupColor));
+
+                    if (entity.type === 'spike') {
+                        canvas.classList.add('shake');
+                        setTimeout(() => canvas.classList.remove('shake'), 500);
+                    } else {
+                        confetti({
+                            particleCount: 15,
+                            spread: 40,
+                            origin: { 
+                                x: e.clientX / window.innerWidth, 
+                                y: e.clientY / window.innerHeight 
+                            },
+                            colors: [entity.color]
+                        });
+                    }
+                }
+            });
+        });
+
+        // Music Control
+        let isMuted = false;
+        const player = document.getElementById('youtubePlayer');
+        
+        function toggleMusic() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('musicBtn');
+            if (isMuted) {
+                btn.innerText = '🔇';
+                player.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+            } else {
+                btn.innerText = '🔊';
+                player.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+                player.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            }
+        }
+
+        document.addEventListener('click', function() {
+            if (!isMuted) {
+                player.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+                player.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            }
+        }, { once: true });
+    </script>
+</body>
+</html>
